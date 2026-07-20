@@ -1,0 +1,59 @@
+{
+  "id": "agent-code-guard",
+  "name": "Agent Code Guard",
+  "description": "Blocks named agents from directly writing/editing code or config, pushing them to delegate instead.",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "trustedToolPolicies": ["agent-code-guard-policy"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "agentIds": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Agent ids this guard applies to. Empty array = applies to no agent (guard is a no-op until configured)."
+      },
+      "delegateTo": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Names shown in the block message, e.g. the coding agents the guarded agent should delegate to."
+      },
+      "blockedExtensionsDirect": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "File extensions (no dot) blocked for edit/write/apply_patch. Default: py, js, ts, jsx, tsx, json, sh."
+      },
+      "blockedExtensionsExec": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "File extensions (no dot) blocked when detected inside exec commands (heredocs, cp/mv, cat redirects). Default: py, js, ts, jsx, tsx, sh."
+      },
+      "exceptedPaths": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Regex patterns (matched against the full path and the basename) that are always allowed even if they hit a blocked extension - e.g. status/changelog files the guarded agent is allowed to keep updating itself."
+      },
+      "mode": {
+        "type": "string",
+        "enum": ["block", "requireApproval"],
+        "default": "block",
+        "description": "'block' silently and immediately denies the tool call. 'requireApproval' shows an operator approval prompt instead."
+      },
+      "approvalTimeoutMs": {
+        "type": "number",
+        "default": 300000,
+        "description": "Only used in requireApproval mode: how long to wait for an operator decision before applying approvalTimeoutBehavior."
+      },
+      "approvalTimeoutBehavior": {
+        "type": "string",
+        "enum": ["deny", "allow"],
+        "default": "deny",
+        "description": "Only used in requireApproval mode: what happens if the approval prompt times out."
+      }
+    }
+  }
+}
