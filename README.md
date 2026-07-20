@@ -56,7 +56,7 @@ from touching code, and point it at your coding agents:
           delegateTo: ["coder", "reviewer-agent"],
           blockedExtensionsDirect: ["py", "js", "ts", "jsx", "tsx", "json", "sh"],
           blockedExtensionsExec: ["py", "js", "ts", "jsx", "tsx", "sh"],
-          exceptedPaths: ["STATUS\\.md$", "CHANGELOG\\.md$", "dziennik\\.md$"],
+          exceptedPaths: ["STATUS\\.md$", "CHANGELOG\\.md$", "README\\.md$"],
           mode: "block",
         },
       },
