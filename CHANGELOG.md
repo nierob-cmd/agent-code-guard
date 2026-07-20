@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Docs fix: install command in README used a literal `<owner>` placeholder
+  instead of the real publisher handle.
+
 ## 1.0.0
 
 - Initial release.

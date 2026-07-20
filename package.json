@@ -1,6 +1,6 @@
 {
   "name": "@nierob-cmd/agent-code-guard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Stops named OpenClaw agents from touching code/config directly and pushes them to delegate to the right coding agent instead.",
   "type": "module",
   "license": "MIT",
