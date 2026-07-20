@@ -35,7 +35,7 @@ Two modes:
 ## Install
 
 ```bash
-openclaw plugins install clawhub:<owner>/agent-code-guard
+openclaw plugins install clawhub:nierob-cmd/agent-code-guard
 ```
 
 ## Configure
