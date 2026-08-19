@@ -20,17 +20,35 @@ job.
 `agent-code-guard` is an OpenClaw trusted-tool-policy plugin. For every
 configured agent, it inspects `edit`, `write`, `apply_patch`, and `exec`
 tool calls before they run. If the call touches a blocked file extension —
-directly, through a heredoc, through `cp`/`mv`, or through a `cat ... >`
-redirect — it stops the call and tells the agent (and, optionally, you) to
-delegate instead.
+directly, through a heredoc, through `cp`/`mv`/`install`/`touch`/`dd`,
+through `tee`, through an in-place editor (`sed -i`, `perl -i`), through an
+inline interpreter write primitive (Python/Node/Bun/Deno/Ruby/Perl/PHP), or
+through a `cat ... >` redirect — it stops the call and tells the agent (and,
+optionally, you) to delegate instead.
 
-Two modes:
+Shell wrappers are unwrapped before scanning: `sh -c '...'`, `bash -c '...'`,
+and `zsh -c '...'` (including nested combinations) are recursively unpacked
+so a write hidden inside a wrapped sub-shell is caught the same way a bare
+command would be.
+
+Path checks are symlink-aware. An excepted path (`exceptedPaths`) is only
+honored against the filesystem-resolved real path, not the raw string an
+agent passes in — so `ln -s src/app.ts STATUS.md` followed by "write to the
+excepted `STATUS.md`" does not bypass protection for `src/app.ts`. A new
+`blockedPaths` list (regex, checked against every resolved path form) adds a
+hard block that no exception can override, for files you never want touched
+under any circumstance.
+
+Three modes:
 
 - **`block`** (default) — silent, instant denial. No popup, no five-minute
   timeout, no decision left hanging for a human. The agent just gets told
   "no, delegate" and moves on.
 - **`requireApproval`** — the polite version, if you'd rather review each
   attempt yourself before denying it (or occasionally allowing it).
+- **`audit`** (new in 2.0.0) — never blocks or prompts; logs every hit it
+  would otherwise have acted on, at `warn` level, so you can see what the
+  policy would do before switching a fleet over to `block`.
 
 ## Install
 
@@ -77,6 +95,32 @@ from touching code, and point it at your coding agents:
 - `blockedExtensionsDirect` / `blockedExtensionsExec` — tune these per your
   stack. Add your own DSL extensions (`.tf`, `.dyn`, whatever your agents
   work with) if plain code extensions aren't the whole story for you.
+- `blockedPaths` (new in 2.0.0, optional, default `[]`) — regex patterns
+  checked against every resolved form of a candidate path (raw, lexically
+  normalized, and symlink-resolved). Unlike `exceptedPaths`, nothing
+  overrides a `blockedPaths` hit — use it for files that must never be
+  touched by the guarded agent, full stop.
+
+## Security hardening in 2.0.0
+
+Version 1.x matched extensions against the path string an agent literally
+passed to the tool call. That is enough to stop a cooperative agent from
+accidentally editing `app.py`, but it does not survive deliberate evasion.
+2.0.0 closes the gaps that mattered most:
+
+- **Symlink/alias bypass** — an excepted path is now resolved via
+  `fs.realpathSync` before the exception is checked. Pointing an excepted
+  filename at a protected file no longer works.
+- **Shell-wrapper evasion** — `sh -c`/`bash -c`/`zsh -c` payloads (including
+  nested wrappers) are unpacked and scanned like top-level commands.
+- **Broader exec write-intent coverage** — redirects (`>`, `>>`), `cp`/`mv`/
+  `install`/`touch`/`dd`, `tee`, in-place editors (`sed -i`, `perl -i`), and
+  inline interpreter write calls (`open(...,'w')`, `writeFileSync`,
+  `File.write`, `file_put_contents`, etc.) across Python, Node, Bun, Deno,
+  Ruby, Perl, and PHP.
+- **Path traversal** — candidate paths are lexically normalized (`..`
+  collapsed against a best-effort working directory) before extension
+  matching, so a `../../` escape does not silently dodge the check.
 
 ## Why `block` instead of an approval prompt
 
@@ -100,7 +144,19 @@ timeout and timeout fallback.
   scoped per `agentIds`, on purpose. Guard only the agents that should
   never be doing this themselves.
 - It does not persist or log anywhere beyond your normal OpenClaw tool-call
-  diagnostics. No telemetry, no phoning home.
+  diagnostics (except `audit` mode's explicit warn-level log line). No
+  telemetry, no phoning home.
+- **It is not a sandbox and does not provide OS-level security.** It is a
+  best-effort policy layer built on regex-based command parsing and
+  filesystem path resolution at evaluation time — it reduces the odds of an
+  agent accidentally or casually writing where it shouldn't, and raises the
+  bar for deliberate evasion, but it cannot guarantee containment against an
+  adversarial model actively trying to escape it (e.g. via a shell syntax
+  form the parser doesn't recognize, a TOCTOU race between evaluation and
+  execution, or a tool/capability entirely outside `edit`/`write`/
+  `apply_patch`/`exec`). If you need a hard security boundary, enforce it at
+  the OS/container/filesystem-permission level in addition to this plugin,
+  not instead of it.
 
 ## License
 

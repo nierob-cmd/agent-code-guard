@@ -35,13 +35,18 @@
       "exceptedPaths": {
         "type": "array",
         "items": { "type": "string" },
-        "description": "Regex patterns (matched against the full path and the basename) that are always allowed even if they hit a blocked extension - e.g. status/changelog files the guarded agent is allowed to keep updating itself."
+        "description": "Regex patterns (matched against the symlink-resolved real path and its basename) that are always allowed even if they hit a blocked extension - e.g. status/changelog files the guarded agent is allowed to keep updating itself. Matched against the resolved path, so aliasing an excepted name to a protected file via a symlink does not bypass protection."
+      },
+      "blockedPaths": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Regex patterns (matched against the raw path, the symlink-resolved real path, and its basename) that are always blocked, with no exceptedPaths override. Default: empty."
       },
       "mode": {
         "type": "string",
-        "enum": ["block", "requireApproval"],
+        "enum": ["block", "requireApproval", "audit"],
         "default": "block",
-        "description": "'block' silently and immediately denies the tool call. 'requireApproval' shows an operator approval prompt instead."
+        "description": "'block' silently and immediately denies the tool call. 'requireApproval' shows an operator approval prompt instead. 'audit' never blocks or prompts - it only logs what would have been blocked, at warn level."
       },
       "approvalTimeoutMs": {
         "type": "number",

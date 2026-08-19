@@ -1,16 +1,22 @@
 {
   "name": "@nierob-cmd/agent-code-guard",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Stops named OpenClaw agents from touching code/config directly and pushes them to delegate to the right coding agent instead.",
   "type": "module",
   "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test security-tests/guard.test.mjs",
+    "selftest": "node security-tests/run-selftest.mjs"
+  },
   "keywords": [
     "openclaw",
     "openclaw-plugin",
     "tool-policy",
     "delegation",
     "guardrail",
-    "multi-agent"
+    "multi-agent",
+    "security"
   ],
   "openclaw": {
     "extensions": ["./index.js"],
