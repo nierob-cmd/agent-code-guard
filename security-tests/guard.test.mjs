@@ -280,6 +280,48 @@ test("26. php file_put_contents inline primitive is blocked", () => {
   assert.ok(isBlocked(decision));
 });
 
+test("28. symlinked parent directory, target does not exist yet, is blocked", () => {
+  // real/link -> real/src ; write real/link/new.ts, where new.ts has never
+  // existed. The parent segment is the symlink, not the leaf - resolution
+  // must walk up to the nearest existing ancestor (the symlinked dir),
+  // resolve THAT, then rejoin the not-yet-created leaf.
+  const cfg = baseCfg();
+  const link = path.join(tmpDir, "real", "link");
+  const src = path.join(tmpDir, "real", "src");
+  fs.mkdirSync(src, { recursive: true });
+  fs.symlinkSync(src, link);
+  const target = path.join(link, "new.ts");
+  assert.equal(fs.existsSync(target), false, "precondition: target must not exist yet");
+  const decision = evaluateGuard(cfg, { toolName: "write", params: { file_path: target } }, ctx("protected-agent", tmpDir));
+  assert.ok(isBlocked(decision), "write through a symlinked parent to a not-yet-existing file must still resolve to the real (protected) directory");
+});
+
+test("29. symlinked parent directory, target already exists, is blocked", () => {
+  const cfg = baseCfg();
+  const link = path.join(tmpDir, "real", "link");
+  const src = path.join(tmpDir, "real", "src");
+  // real/link already created by test 28; reuse it if present, else create.
+  if (!fs.existsSync(link)) fs.symlinkSync(src, link);
+  const existingTarget = path.join(link, "existing.ts");
+  fs.writeFileSync(path.join(src, "existing.ts"), "// pre-existing\n");
+  assert.equal(fs.existsSync(existingTarget), true, "precondition: target must already exist via the symlinked parent");
+  const decision = evaluateGuard(cfg, { toolName: "write", params: { file_path: existingTarget } }, ctx("protected-agent", tmpDir));
+  assert.ok(isBlocked(decision), "write through a symlinked parent to an already-existing file must resolve to the real (protected) directory");
+});
+
+test("30. audit mode returns exactly undefined (real trusted-tool-policy 'allow' contract), never a block/requireApproval/allow:false shape", () => {
+  // Verified against the real host contract in
+  // src/plugins/host-hooks.ts: PluginTrustedToolPolicyRegistration.evaluate
+  // may return PluginHookBeforeToolCallResult | {allow?, reason?} | void.
+  // `void`/`undefined` is the implicit-allow path - audit mode must use
+  // exactly that, not an explicit {allow:true} or any block-shaped object,
+  // since only `undefined` is guaranteed not to trigger any UI/approval
+  // side effect regardless of host version.
+  const cfg = baseCfg({ mode: "audit" });
+  const decision = evaluateGuard(cfg, { toolName: "write", params: { file_path: "app.py" } }, ctx());
+  assert.equal(decision, undefined);
+});
+
 test("27. v1.x config shape (no new fields) still normalizes and blocks as before", () => {
   const cfg = normalizeConfig({
     agentIds: ["protected-agent"],

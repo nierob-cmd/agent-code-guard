@@ -26,6 +26,17 @@ const cases = [
   { name: "python3 -c inline write with double quotes inside single", tool: "exec", command: `python3 -c 'open("app.py","w").write("x")'` },
   { name: "symlink alias resolving to protected .ts, no exception configured", tool: "write", params: { file_path: path.join(tmpDir, "alias.md") }, cwd: tmpDir },
   { name: "relative traversal through symlinked dir cwd", tool: "exec", command: "mv draft.txt ../src/app.ts", cwd: path.join(tmpDir, "src") },
+  { name: "double-nested bash -c bash -c redirect", tool: "exec", command: `bash -c "bash -c 'echo x > app.ts'"` },
+  { name: "sh -c wrapping bash -c (double-quoted inner)", tool: "exec", command: `sh -c 'bash -c "echo x > app.ts"'` },
+  { name: "zsh -c wrapping sh -c tee", tool: "exec", command: `zsh -c 'sh -c "tee app.ts"'` },
+  { name: "dir/../src/app.ts traversal via cp", tool: "exec", command: "cp payload.py dir/../src/app.ts" },
+  { name: "dir//src//app.ts double-slash via cp", tool: "exec", command: "cp payload.py dir//src//app.ts" },
+  { name: "./src/./app.ts dot-segments via cp", tool: "exec", command: "cp payload.py ./src/./app.ts" },
+  { name: "sudo bash -c redirect", tool: "exec", command: `sudo bash -c "echo x > app.ts"` },
+  { name: "sudo sh -c python3 -c inline write", tool: "exec", command: `sudo sh -c "python3 -c 'open(\\"app.ts\\",\\"w\\").write(1)'"` },
+  { name: "command chaining with && before redirect", tool: "exec", command: "echo ok && echo x > app.ts" },
+  { name: "command chaining with ; before redirect", tool: "exec", command: "echo ok ; echo x > app.ts" },
+  { name: "pipe into tee", tool: "exec", command: "echo x | tee app.ts" },
 ];
 
 let failures = 0;
